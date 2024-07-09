@@ -4,14 +4,14 @@ import (
 	"os"
 )
 
-type Config struct {
+type ServerConfig struct {
 	Port string
 }
 
-func LoadConfig() *Config {
+func LoadServerConfig() *ServerConfig {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = ":8080"
 	}
-	return &Config{Port: port}
+	return &ServerConfig{Port: port}
 }

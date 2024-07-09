@@ -9,7 +9,7 @@ import (
 )
 
 type Server struct {
-	config    *config.Config
+	config    *config.ServerConfig
 	clients   map[*Client]bool
 	broadcast chan models.Message
 	mu        sync.Mutex
