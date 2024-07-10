@@ -62,3 +62,11 @@ func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
 	}
 	return messages, nil
 }
+
+func UpdateMessageStatus(db *DB, messageID int, deliveredToClient bool) error {
+	_, err := db.Exec("UPDATE messages SET delivered_to_client = ? WHERE id = ?", deliveredToClient, messageID)
+	if err != nil {
+		return err
+	}
+	return nil
+}

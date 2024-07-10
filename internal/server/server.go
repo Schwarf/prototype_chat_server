@@ -57,10 +57,43 @@ func (s *Server) broadcastMessage(messageType int, message models.Message) {
 	}
 }
 
+func (s *Server) retryUndeliveredMessages() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	undeliveredMessages, err := storage.RetrieveUndeliveredMessages(s.database)
+	if err != nil {
+		log.Printf("Failed to retrieve undelivered messages: %v", err)
+		return
+	}
+
+	for _, message := range undeliveredMessages {
+		for client := range s.clients {
+			if client.Online {
+				msgJSON, err := json.Marshal(message)
+				if err != nil {
+					log.Printf("Error marshaling message to JSON: %v", err)
+					continue
+				}
+				if err := client.SendMessage(websocket.TextMessage, msgJSON); err != nil {
+					log.Printf("Error writing to WebSocket: %v", err)
+					client.Online = false
+				} else {
+					storage.UpdateMessageStatus(s.database, message.ID, true)
+				}
+			}
+		}
+	}
+}
+
 func (s *Server) handleMessages() {
 	for {
-		msg := <-s.broadcast
-		s.broadcastMessage(websocket.TextMessage, msg)
+		select {
+		case message := <-s.broadcast:
+			s.broadcastMessage(websocket.TextMessage, message)
+		case <-time.After(time.Second * 3):
+			s.retryUndeliveredMessages()
+		}
 	}
 }
 
