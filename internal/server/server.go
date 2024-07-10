@@ -38,6 +38,24 @@ func (s *Server) homepage(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(writer, "Welcome to Schwarf's WebSocket chat server!")
 }
 
+func (s *Server) broadcastMessage(messageType int, message []byte) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	for client := range s.clients {
+		if err := client.Connection.WriteMessage(messageType, message); err != nil {
+			log.Printf("Error writing to WebSocket: %v", err)
+			client.Connection.Close()
+			delete(s.clients, client)
+		}
+	}
+}
+func (s *Server) handleMessages() {
+	for {
+		msg := <-s.broadcast
+		s.broadcastMessage(websocket.TextMessage, []byte(msg.Text))
+	}
+}
+
 func (s *Server) Start() error {
 	http.HandleFunc("/", s.homepage)
 	http.HandleFunc("/ws", s.websocketEndpoint)
