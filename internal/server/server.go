@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 type Server struct {
@@ -45,15 +46,48 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(s.config.Port, nil)
 }
 
+func (s *Server) storeMessage(message models.Message) error {
+	if err := storage.StoreMessage(s.database, message); err != nil {
+		log.Printf("Storing message failed! Error: %v", err)
+		return err
+	}
+	return nil
+}
+
 func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Request) {
-	connections, err := s.upgrader.Upgrade(writer, request, nil)
+	connection, err := s.upgrader.Upgrade(writer, request, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade to WebSocket: %v", err)
 		return
 	}
-	defer connections.Close()
-}
+	defer connection.Close()
+	clientID := fmt.Sprintf("Client-%d", time.Now().UnixNano())
+	client := &Client{ID: clientID, Connection: connection, Server: s}
 
-func (s *Server) handleMessages() {
+	s.mutex.Lock()
+	s.clients[client] = true
+	s.mutex.Unlock()
 
+	log.Printf("Client %s connected", client.ID)
+	defer func() {
+		log.Printf("Client %s disconnected", client.ID)
+		s.mutex.Lock()
+		delete(s.clients, client)
+		s.mutex.Unlock()
+	}()
+
+	for {
+		_, message, err := connection.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		timestamp := time.Now().Unix()
+		log.Printf("Received message from client %s at %s: %s\n", client.ID, time.Now().Format(time.RFC3339), message)
+		msg := models.Message{ChatID: clientID, Sender: client.ID, Text: string(message), Timestamp: timestamp, Hash: "somehash"}
+		s.broadcast <- msg
+		if err := s.storeMessage(msg); err != nil {
+			log.Printf("Failed to store message! Error: %v", err)
+		}
+	}
 }
