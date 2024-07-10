@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/Schwarf/prototype_chat_server/internal/models"
 	"github.com/Schwarf/prototype_chat_server/internal/storage"
@@ -38,21 +39,28 @@ func (s *Server) homepage(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(writer, "Welcome to Schwarf's WebSocket chat server!")
 }
 
-func (s *Server) broadcastMessage(messageType int, message []byte) {
+func (s *Server) broadcastMessage(messageType int, message models.Message) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for client := range s.clients {
-		if err := client.Connection.WriteMessage(messageType, message); err != nil {
-			log.Printf("Error writing to WebSocket: %v", err)
-			client.Connection.Close()
-			delete(s.clients, client)
+		if client.Online {
+			msgJSON, err := json.Marshal(message)
+			if err != nil {
+				log.Printf("Error marshaling message to JSON: %v", err)
+				continue
+			}
+			if err := client.SendMessage(messageType, msgJSON); err != nil {
+				log.Printf("Error writing to WebSocket: %v", err)
+				client.Online = false
+			}
 		}
 	}
 }
+
 func (s *Server) handleMessages() {
 	for {
 		msg := <-s.broadcast
-		s.broadcastMessage(websocket.TextMessage, []byte(msg.Text))
+		s.broadcastMessage(websocket.TextMessage, msg)
 	}
 }
 
