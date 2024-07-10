@@ -44,7 +44,7 @@ func StoreMessage(db *DB, message models.Message) error {
 	return nil
 }
 
-func RetrieveMessages(db *DB) ([]models.Message, error) {
+func RetrieveAllMessages(db *DB) ([]models.Message, error) {
 	rows, err := db.Query("SELECT id, chat_id, sender, text, timestamp, hash FROM messages")
 	if err != nil {
 		return nil, err
