@@ -26,7 +26,8 @@ func CreateMessagesTable(db *DB) error {
         sender TEXT NOT NULL,
         text TEXT NOT NULL,
         timestamp INTEGER NOT NULL,
-        hash TEXT NOT NULL
+        hash TEXT NOT NULL,
+        delivered_to_client BOOLEAN NOT NULL DEFAULT FALSE,
     );`
 	_, err := db.Exec(query)
 	if err != nil {
@@ -44,8 +45,8 @@ func StoreMessage(db *DB, message models.Message) error {
 	return nil
 }
 
-func RetrieveAllMessages(db *DB) ([]models.Message, error) {
-	rows, err := db.Query("SELECT id, chat_id, sender, text, timestamp, hash FROM messages")
+func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
+	rows, err := db.Query("SELECT id, chat_id, sender, text, timestamp, hash FROM messages WHERE delivered_to_client = false")
 	if err != nil {
 		return nil, err
 	}
