@@ -21,7 +21,8 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func LoadSecrets(filename string) {
+func LoadSecrets() {
+	filename := "/home/andreas/Documents/chat_secrets/secrets.txt"
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("Failed to load secrets: %v", err)

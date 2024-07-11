@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Schwarf/prototype_chat_server/internal/authentication"
 	"github.com/Schwarf/prototype_chat_server/internal/server"
 	"github.com/Schwarf/prototype_chat_server/internal/storage"
 	"github.com/Schwarf/prototype_chat_server/pkg/config"
@@ -26,6 +27,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("CreatingMessageTable failed: %v", err)
 	}
+
+	authentication.LoadSecrets()
 
 	// Create and start the server
 	srv := server.NewServer(serverConfig, db)
