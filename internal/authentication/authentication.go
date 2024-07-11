@@ -37,7 +37,7 @@ func LoadSecrets(filename string) {
 	}
 }
 
-func ValidateSecret(secret string) bool {
+func IsSecretValid(secret string) bool {
 	return secrets[secret]
 }
 
