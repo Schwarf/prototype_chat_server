@@ -25,6 +25,7 @@ func registerClient(secret, username string) (string, error) {
 	url := "http://localhost:8080/register"
 	reqBody := RegisterRequest{Secret: secret, Username: username}
 	reqBytes, err := json.Marshal(reqBody)
+	log.Println("Come here 1!")
 	if err != nil {
 		return "", fmt.Errorf("Test: Failed to marshal request body: %v", err)
 	}
@@ -34,12 +35,13 @@ func registerClient(secret, username string) (string, error) {
 		return "", fmt.Errorf("Test: Failed to register client: %v", err)
 	}
 	defer resp.Body.Close()
-
+	log.Println("Come here 2!")
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("registration failed with status code: %d", resp.StatusCode)
 	}
 
 	var registerResponse RegisterResponse
+	log.Println("Come here 3!")
 	err = json.NewDecoder(resp.Body).Decode(&registerResponse)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode response: %v", err)
@@ -76,12 +78,8 @@ func connectWebSocket(token string) {
 }
 
 func TestClient(t *testing.T) {
-	if len(os.Args) != 3 {
-		log.Fatalf("Usage: %s <secret> <username>", os.Args[0])
-	}
-
-	secret := os.Args[1]
-	username := os.Args[2]
+	secret := os.Getenv("CHAT_SERVER_SECRET")
+	username := os.Getenv("CHAT_SERVER_USERNAME")
 
 	token, err := registerClient(secret, username)
 	if err != nil {
