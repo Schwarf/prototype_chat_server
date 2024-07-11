@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Schwarf/prototype_chat_server/internal/handlers"
 	"github.com/Schwarf/prototype_chat_server/internal/models"
 	"github.com/Schwarf/prototype_chat_server/internal/storage"
 	"github.com/Schwarf/prototype_chat_server/pkg/config"
@@ -99,6 +100,7 @@ func (s *Server) handleMessages() {
 
 func (s *Server) Start() error {
 	http.HandleFunc("/", s.homepage)
+	http.HandleFunc("/register", handlers.RegisterClientHandler)
 	http.HandleFunc("/ws", s.websocketEndpoint)
 	log.Println("Starting server on port", s.config.Port)
 	go s.handleMessages()
