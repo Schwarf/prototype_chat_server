@@ -39,7 +39,7 @@ func (s *Server) homepage(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(writer, "Welcome to Schwarf's WebSocket chat server!")
 }
 
-func (s *Server) broadcastMessage(messageType int, message models.Message) {
+func (s *Server) broadcastMessage(message models.Message) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for client := range s.clients {
@@ -49,7 +49,7 @@ func (s *Server) broadcastMessage(messageType int, message models.Message) {
 				log.Printf("Error marshaling message to JSON: %v", err)
 				continue
 			}
-			if err := client.SendMessage(messageType, msgJSON); err != nil {
+			if err := client.SendMessage(websocket.TextMessage, msgJSON); err != nil {
 				log.Printf("Error writing to WebSocket: %v", err)
 				client.Online = false
 			}
@@ -90,7 +90,7 @@ func (s *Server) handleMessages() {
 	for {
 		select {
 		case message := <-s.broadcast:
-			s.broadcastMessage(websocket.TextMessage, message)
+			s.broadcastMessage(message)
 		case <-time.After(time.Second * 3):
 			s.retryUndeliveredMessages()
 		}
@@ -143,7 +143,7 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 		}
 		timestamp := time.Now().Unix()
 		log.Printf("Received message from client %s at %s: %s\n", client.ID, time.Now().Format(time.RFC3339), message)
-		msg := models.Message{ChatID: clientID, Sender: client.ID, Text: string(message), Timestamp: timestamp, Hash: "somehash"}
+		msg := models.Message{ChatID: clientID, Sender: client.ID, Text: string(message), Timestamp_ms: timestamp, Hash: "somehash"}
 		s.broadcast <- msg
 		if err := s.storeMessage(msg); err != nil {
 			log.Printf("Failed to store message! Error: %v", err)

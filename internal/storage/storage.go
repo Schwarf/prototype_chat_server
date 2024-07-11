@@ -25,7 +25,7 @@ func CreateMessagesTable(db *DB) error {
         chat_id TEXT NOT NULL,
         sender TEXT NOT NULL,
         text TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
+        timestamp_ms INTEGER NOT NULL,
         hash TEXT NOT NULL,
         delivered_to_client BOOLEAN NOT NULL DEFAULT FALSE,
     );`
@@ -37,8 +37,8 @@ func CreateMessagesTable(db *DB) error {
 }
 
 func StoreMessage(db *DB, message models.Message) error {
-	_, err := db.Exec("INSERT INTO messages (chat_id, sender, text, timestamp, hash) VALUES (?, ?, ?, ?, ?)",
-		message.ChatID, message.Sender, message.Text, message.Timestamp, message.Hash)
+	_, err := db.Exec("INSERT INTO messages (chat_id, sender, text, timestamp_ms, hash) VALUES (?, ?, ?, ?, ?)",
+		message.ChatID, message.Sender, message.Text, message.Timestamp_ms, message.Hash)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func StoreMessage(db *DB, message models.Message) error {
 }
 
 func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
-	rows, err := db.Query("SELECT id, chat_id, sender, text, timestamp, hash FROM messages WHERE delivered_to_client = false")
+	rows, err := db.Query("SELECT id, chat_id, sender, text, timestamp_ms, hash FROM messages WHERE delivered_to_client = false")
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
 	var messages []models.Message
 	for rows.Next() {
 		var message models.Message
-		if err := rows.Scan(&message.ID, &message.ChatID, &message.Sender, &message.Text, &message.Timestamp, &message.Hash); err != nil {
+		if err := rows.Scan(&message.ID, &message.ChatID, &message.Sender, &message.Text, &message.Timestamp_ms, &message.Hash); err != nil {
 			return nil, err
 		}
 		messages = append(messages, message)
