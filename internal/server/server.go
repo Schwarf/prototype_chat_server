@@ -150,5 +150,9 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 		if err := s.storeMessage(msg); err != nil {
 			log.Printf("Failed to store message! Error: %v", err)
 		}
+		ack := fmt.Sprintf("Message from %s received at %s", client.ID, time.Now().Format(time.RFC3339))
+		if err := client.SendMessage(websocket.TextMessage, []byte(ack)); err != nil {
+			log.Printf("Error sending acknowledgment to WebSocket: %v", err)
+		}
 	}
 }
