@@ -15,7 +15,7 @@ import (
 
 type Server struct {
 	config    *config.ServerConfig
-	clients   map[*Client]bool
+	clients   map[*models.ChatClient]bool
 	broadcast chan models.Message
 	mutex     sync.Mutex
 	database  *storage.DB
@@ -25,7 +25,7 @@ type Server struct {
 func NewServer(serverConfig *config.ServerConfig, dataBase *storage.DB) *Server {
 	return &Server{
 		config:    serverConfig,
-		clients:   make(map[*Client]bool),
+		clients:   make(map[*models.ChatClient]bool),
 		broadcast: make(chan models.Message),
 		database:  dataBase,
 		upgrader: websocket.Upgrader{
@@ -120,16 +120,16 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 		return
 	}
 	defer connection.Close()
-	clientID := fmt.Sprintf("Client-%d", time.Now().UnixNano())
-	client := &Client{ID: clientID, Connection: connection, Server: s}
+	clientID := fmt.Sprintf("ChatClient-%d", time.Now().UnixNano())
+	client := &models.ChatClient{ID: clientID, Connection: connection, Server: s}
 
 	s.mutex.Lock()
 	s.clients[client] = true
 	s.mutex.Unlock()
 
-	log.Printf("Client %s connected", client.ID)
+	log.Printf("ChatClient %s connected", client.ID)
 	defer func() {
-		log.Printf("Client %s disconnected", client.ID)
+		log.Printf("ChatClient %s disconnected", client.ID)
 		s.mutex.Lock()
 		delete(s.clients, client)
 		s.mutex.Unlock()
