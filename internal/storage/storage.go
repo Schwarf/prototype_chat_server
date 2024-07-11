@@ -2,7 +2,9 @@ package storage
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/Schwarf/prototype_chat_server/internal/models"
+	"github.com/Schwarf/prototype_chat_server/pkg/config"
 	_ "github.com/lib/pq"
 )
 
@@ -10,8 +12,9 @@ type DB struct {
 	*sql.DB
 }
 
-func ConnectToDatabase() (*DB, error) {
-	db, err := sql.Open("postgres", "./messages.db")
+func ConnectToDatabase(config *config.DatabaseConfig) (*DB, error) {
+	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", config.Host, config.Port, config.User, config.Password, config.DBName)
+	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
 		return nil, err
 	}

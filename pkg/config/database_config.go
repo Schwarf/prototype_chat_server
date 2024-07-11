@@ -30,5 +30,4 @@ func LoadDataBaseConfig() (*DatabaseConfig, error) {
 		return config, err
 	}
 	return config, err
-
 }
