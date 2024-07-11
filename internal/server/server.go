@@ -123,7 +123,7 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 	}
 	defer connection.Close()
 	clientID := fmt.Sprintf("ChatClient-%d", time.Now().UnixNano())
-	client := &models.ChatClient{ID: clientID, Connection: connection, Server: s}
+	client := &models.ChatClient{ID: clientID, Connection: connection}
 
 	s.mutex.Lock()
 	s.clients[client] = true
