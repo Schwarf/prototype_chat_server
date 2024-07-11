@@ -40,7 +40,7 @@ func CreateMessagesTable(db *DB) error {
 }
 
 func StoreMessage(db *DB, message models.Message) error {
-	_, err := db.Exec("INSERT INTO messages (chat_id, sender, text, timestamp_ms, hash) VALUES (?, ?, ?, ?, ?)",
+	_, err := db.Exec("INSERT INTO messages (chat_id, sender, text, timestamp_ms, hash) VALUES ($1, $2, $3, $4, $5)",
 		message.ChatID, message.Sender, message.Text, message.Timestamp_ms, message.Hash)
 	if err != nil {
 		return err
