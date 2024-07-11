@@ -6,6 +6,7 @@ import (
 	"github.com/Schwarf/prototype_chat_server/internal/models"
 	"github.com/Schwarf/prototype_chat_server/pkg/config"
 	_ "github.com/lib/pq"
+	"log"
 )
 
 type DB struct {
@@ -40,6 +41,7 @@ func CreateMessagesTable(db *DB) error {
 }
 
 func StoreMessage(db *DB, message models.Message) error {
+	log.Println("Message: ", message.ChatID, message.Sender, message.Text)
 	_, err := db.Exec("INSERT INTO messages (chat_id, sender, text, timestamp_ms, hash) VALUES ($1, $2, $3, $4, $5)",
 		message.ChatID, message.Sender, message.Text, message.Timestamp_ms, message.Hash)
 	if err != nil {
