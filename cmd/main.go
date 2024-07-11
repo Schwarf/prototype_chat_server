@@ -13,13 +13,18 @@ func main() {
 	databaseConfig, err := config.LoadDataBaseConfig()
 	if err != nil {
 		log.Fatalf("Database config could not be loaded")
-		return
 	}
 
 	// Initialize the database
 	db, err := storage.ConnectToDatabase(databaseConfig)
 	if err != nil {
 		log.Fatalf("Database connection failed: %v", err)
+	}
+
+	// Creates MessageTable if is not existing yet
+	err = storage.CreateMessagesTable(db)
+	if err != nil {
+		log.Fatalf("CreatingMessageTable failed: %v", err)
 	}
 
 	// Create and start the server

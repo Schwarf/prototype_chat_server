@@ -16,18 +16,18 @@ type DatabaseConfig struct {
 
 func LoadDataBaseConfig() (*DatabaseConfig, error) {
 	filePath := "/home/andreas/Documents/database_access/postgres_config.json"
-	var config *DatabaseConfig
+	var config DatabaseConfig
 	configFile, err := os.Open(filePath)
 	if err != nil {
 		log.Printf("Error opening config file: %v", err)
-		return config, err
+		return nil, err
 	}
 	defer configFile.Close()
 	jsonParser := json.NewDecoder(configFile)
-	err = jsonParser.Decode(config)
+	err = jsonParser.Decode(&config)
 	if err != nil {
 		log.Printf("Error parsing config file: %v", err)
-		return config, err
+		return nil, err
 	}
-	return config, err
+	return &config, err
 }

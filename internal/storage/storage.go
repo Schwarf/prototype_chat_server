@@ -24,13 +24,13 @@ func ConnectToDatabase(config *config.DatabaseConfig) (*DB, error) {
 func CreateMessagesTable(db *DB) error {
 	query := `
     CREATE TABLE IF NOT EXISTS messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         chat_id TEXT NOT NULL,
         sender TEXT NOT NULL,
         text TEXT NOT NULL,
-        timestamp_ms INTEGER NOT NULL,
+        timestamp_ms BIGINT NOT NULL,
         hash TEXT NOT NULL,
-        delivered_to_client BOOLEAN NOT NULL DEFAULT FALSE,
+        delivered_to_client BOOLEAN NOT NULL DEFAULT FALSE
     );`
 	_, err := db.Exec(query)
 	if err != nil {
