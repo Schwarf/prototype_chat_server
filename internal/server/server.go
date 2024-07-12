@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Schwarf/prototype_chat_server/internal/authentication"
 	"github.com/Schwarf/prototype_chat_server/internal/handlers"
 	"github.com/Schwarf/prototype_chat_server/internal/models"
 	"github.com/Schwarf/prototype_chat_server/internal/storage"
@@ -156,7 +157,14 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 			log.Println(err)
 			break
 		}
-		timestamp := time.Now().Unix()
+		var msg models.Message
+		if err := json.Unmarshal(message, &msg); err != nil {
+			log.Printf("Error unmarshaling message: %v", err)
+			continue
+		}
+
+		expectedHash := authentication.GenerateHash(msg.Text, msg)
+
 		log.Printf("Received message from client %s at %s: %s\n", client.ID, time.Now().Format(time.RFC3339), message)
 		msg := models.Message{ChatID: clientID, Sender: client.ID, Text: string(message), Timestamp_ms: timestamp, Hash: "somehash"}
 		s.broadcast <- msg

@@ -14,6 +14,7 @@ type Client struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Token    string `json:"token"`
+	Salt     string `json:"salt"`
 }
 
 func (c *ChatClient) SendMessage(messageType int, message []byte) error {

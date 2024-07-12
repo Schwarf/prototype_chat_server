@@ -46,8 +46,10 @@ func RegisterClientHandler(database *storage.DB, writer http.ResponseWriter, req
 		return
 	}
 	client := models.Client{
+		ID:       clientID,
 		Username: submittedRequest.Username,
 		Token:    token,
+		Salt:     salt,
 	}
 	authentication.RegisterClient(clientID, client)
 	authentication.RemoveSecret(submittedRequest.Secret)

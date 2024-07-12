@@ -2,6 +2,8 @@ package authentication
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/golang-jwt/jwt/v5"
 	"log"
 	"net/http"
@@ -14,7 +16,7 @@ import (
 
 var jwtKey = []byte("your_secret_key")
 var secrets map[string]bool
-var registeredClients = make(map[string]models.Client)
+var registeredClients = make(map[int]models.Client)
 
 type Claims struct {
 	Username string `json:"username"`
@@ -55,6 +57,15 @@ func IsAlphaNumeric(s string) bool {
 	return true
 }
 
+func GenerateHash(message string, salt string) string {
+	data := message + salt
+	hash := sha256.New()
+	hash.Write([]byte(data))
+	hashBytes := hash.Sum(nil)
+	hashString := hex.EncodeToString(hashBytes)
+	return hashString
+}
+
 func GenerateToken(username string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claims := &Claims{
@@ -67,7 +78,7 @@ func GenerateToken(username string) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
-func RegisterClient(clientID string, client models.Client) {
+func RegisterClient(clientID int, client models.Client) {
 	registeredClients[clientID] = client
 }
 

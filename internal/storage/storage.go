@@ -98,17 +98,18 @@ func AddChat(db *DB, clientID int, chatID string) error {
 	return nil
 }
 
-func GetClientIDByToken(db *DB, token string) (int, error) {
+func GetClientIDAndSalt(db *DB, token string) (int, string, error) {
 	var clientID int
+	var salt string
 	query := `
-	SELECT id
+	SELECT id, salt
 	FROM clients
 	WHERE token = $1;`
-	err := db.QueryRow(query, token).Scan(&clientID)
+	err := db.QueryRow(query, token).Scan(&clientID, &salt)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get client by token: %w", err)
+		return 0, "", fmt.Errorf("failed to get client by token: %w", err)
 	}
-	return clientID, nil
+	return clientID, salt, nil
 }
 
 func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
@@ -121,7 +122,7 @@ func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
 	var messages []models.Message
 	for rows.Next() {
 		var message models.Message
-		if err := rows.Scan(&message.ID, &message.ChatID, &message.Sender, &message.Text, &message.Timestamp_ms, &message.Hash); err != nil {
+		if err := rows.Scan(&message.ChatID, &message.ClientID, &message.Text, &message.Timestamp_ms, &message.Hash); err != nil {
 			return nil, err
 		}
 		messages = append(messages, message)
