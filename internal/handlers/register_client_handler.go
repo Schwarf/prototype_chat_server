@@ -10,7 +10,16 @@ import (
 	"net/http"
 )
 
-func RegisterClientHandler(database *storage.DB, writer http.ResponseWriter, request *http.Request) {
+type RegisterHandler struct {
+	database    *storage.DB
+	HandlerFunc func(db *storage.DB, w http.ResponseWriter, r *http.Request)
+}
+
+func (handler RegisterHandler) RegisterClient(w http.ResponseWriter, r *http.Request) {
+	handler.HandlerFunc(handler.database, w, r)
+}
+
+func RegisterClientInDB(database *storage.DB, writer http.ResponseWriter, request *http.Request) {
 	// Expected request send to endpoint
 	var submittedRequest struct {
 		Secret   string `json:"secret"`
