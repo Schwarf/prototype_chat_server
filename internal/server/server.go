@@ -81,7 +81,7 @@ func (s *Server) retryUndeliveredMessages() {
 					log.Printf("Error writing to WebSocket: %v", err)
 					client.Online = false
 				} else {
-					storage.UpdateMessageStatus(s.database, message.ID, true)
+					storage.UpdateMessageStatus(s.database, message.DBID, true)
 				}
 			}
 		}
@@ -130,7 +130,7 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	clientID, err := storage.GetClientIDByToken(s.database, token)
+	clientID, salt, err := storage.GetClientIDAndSalt(s.database, token)
 	if err != nil {
 		log.Printf("Failed to get client ID by token: %v", err)
 		http.Error(writer, "Invalid token", http.StatusUnauthorized)
@@ -163,10 +163,13 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 			continue
 		}
 
-		expectedHash := authentication.GenerateHash(msg.Text, msg)
+		expectedHash := authentication.GenerateHash(msg.Text, salt)
+		if msg.Hash != expectedHash {
+			log.Printf("Invalid hash for message from client %s", clientID)
+			continue
+		}
 
-		log.Printf("Received message from client %s at %s: %s\n", client.ID, time.Now().Format(time.RFC3339), message)
-		msg := models.Message{ChatID: clientID, Sender: client.ID, Text: string(message), Timestamp_ms: timestamp, Hash: "somehash"}
+		log.Printf("Received message from client %s at %s: %s\n", clientID, time.Now().Format(time.RFC3339), message)
 		s.broadcast <- msg
 		if err := s.storeMessage(msg); err != nil {
 			log.Printf("Failed to store message! Error: %v", err)

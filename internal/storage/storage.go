@@ -112,17 +112,17 @@ func GetClientIDAndSalt(db *DB, token string) (int, string, error) {
 	return clientID, salt, nil
 }
 
-func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
-	rows, err := db.Query("SELECT id, chat_id, sender, text, timestamp_ms, hash FROM messages WHERE delivered_to_client = false")
+func RetrieveUndeliveredMessages(db *DB) ([]models.DBMessage, error) {
+	rows, err := db.Query("SELECT id, chat_id, client_id, text, timestamp_ms, hash FROM messages WHERE delivered_to_client = false")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var messages []models.Message
+	var messages []models.DBMessage
 	for rows.Next() {
-		var message models.Message
-		if err := rows.Scan(&message.ChatID, &message.ClientID, &message.Text, &message.Timestamp_ms, &message.Hash); err != nil {
+		var message models.DBMessage
+		if err := rows.Scan(&message.DBID, &message.ClientID, &message.ChatID, &message.Text, &message.Timestamp_ms, &message.Hash); err != nil {
 			return nil, err
 		}
 		messages = append(messages, message)
