@@ -101,8 +101,9 @@ func (s *Server) handleMessages() {
 
 func (s *Server) Start() error {
 	http.HandleFunc("/", s.homepage)
-	registerHandler := handlers.RegisterHandler{database: s.database}
-	http.HandleFunc("/register", handlers.RegisterClientHandler())
+	http.HandleFunc("/register", func(writer http.ResponseWriter, request *http.Request) {
+		handlers.RegisterClient(s.database, writer, request)
+	})
 	http.HandleFunc("/ws", s.websocketEndpoint)
 	log.Println("Starting server on port", s.config.Port)
 	go s.handleMessages()

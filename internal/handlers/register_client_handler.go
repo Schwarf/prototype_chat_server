@@ -19,7 +19,7 @@ func (handler RegisterHandler) RegisterClient(w http.ResponseWriter, r *http.Req
 	handler.HandlerFunc(handler.database, w, r)
 }
 
-func RegisterClientInDB(database *storage.DB, writer http.ResponseWriter, request *http.Request) {
+func RegisterClient(database *storage.DB, writer http.ResponseWriter, request *http.Request) {
 	// Expected request send to endpoint
 	var submittedRequest struct {
 		Secret   string `json:"secret"`
