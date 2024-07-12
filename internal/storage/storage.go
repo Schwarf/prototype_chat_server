@@ -73,13 +73,13 @@ func StoreMessage(db *DB, message models.Message) error {
 	return nil
 }
 
-func AddClient(db *DB, username, token string) (int, error) {
+func AddClient(db *DB, username, token string, salt string) (int, error) {
 	query := `
-	INSERT INTO clients (username, token)
-	VALUES ($1, $2)
+	INSERT INTO clients (username, token, salt)
+	VALUES ($1, $2, $3)
 	RETURNING id;`
 	var clientID int
-	err := db.QueryRow(query, username, token).Scan(&clientID)
+	err := db.QueryRow(query, username, token, salt).Scan(&clientID)
 	if err != nil {
 		return 0, fmt.Errorf("failed to add client: %w", err)
 	}

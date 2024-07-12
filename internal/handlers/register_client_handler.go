@@ -25,8 +25,10 @@ func RegisterClient(database *storage.DB, writer http.ResponseWriter, request *h
 		Secret   string `json:"secret"`
 		Username string `json:"username"`
 	}
+
 	err := json.NewDecoder(request.Body).Decode(&submittedRequest)
 	if err != nil {
+
 		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -47,22 +49,25 @@ func RegisterClient(database *storage.DB, writer http.ResponseWriter, request *h
 		http.Error(writer, "Error generating token", http.StatusInternalServerError)
 		return
 	}
-	clientID, err := storage.AddClient(database, submittedRequest.Username, token)
+
 	salt := uuid.New().String()
+	clientID, err := storage.AddClient(database, submittedRequest.Username, token, salt)
 
 	if err != nil {
 		http.Error(writer, "Error adding client to database", http.StatusInternalServerError)
 		return
 	}
+
 	client := models.Client{
 		ID:       clientID,
 		Username: submittedRequest.Username,
 		Token:    token,
 		Salt:     salt,
 	}
+
 	authentication.RegisterClient(clientID, client)
 	authentication.RemoveSecret(submittedRequest.Secret)
-
+	log.Println("Bad request8")
 	writer.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(writer).Encode(client)
 	log.Println("Client has been registered successfully")
