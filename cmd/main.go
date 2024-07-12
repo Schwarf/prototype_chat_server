@@ -22,12 +22,6 @@ func main() {
 		log.Fatalf("Database connection failed: %v", err)
 	}
 
-	// Creates MessageTable if is not existing yet
-	err = storage.CreateMessagesTable(db)
-	if err != nil {
-		log.Fatalf("CreatingMessageTable failed: %v", err)
-	}
-
 	authentication.LoadSecrets()
 
 	// Create and start the server

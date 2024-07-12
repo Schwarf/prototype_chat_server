@@ -17,23 +17,45 @@ func ConnectToDatabase(config *config.DatabaseConfig) (*DB, error) {
 	connectionString := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", config.Host, config.Port, config.User, config.Password, config.DBName)
 	db, err := sql.Open("postgres", connectionString)
 	if err != nil {
+		log.Printf("Connection to database failed: %v\n", err)
 		return nil, err
 	}
+	if err := createTables(db); err != nil {
+		log.Printf("Creating tables failed: %v\n", err)
+	}
+
 	return &DB{db}, nil
 }
 
-func CreateMessagesTable(db *DB) error {
-	query := `
-    CREATE TABLE IF NOT EXISTS messages (
-        id SERIAL PRIMARY KEY,
-        chat_id TEXT NOT NULL,
-        sender TEXT NOT NULL,
-        text TEXT NOT NULL,
-        timestamp_ms BIGINT NOT NULL,
-        hash TEXT NOT NULL,
-        delivered_to_client BOOLEAN NOT NULL DEFAULT FALSE
-    );`
+func createTables(db *sql.DB) error {
+	query := `CREATE TABLE IF NOT EXISTS clients (
+		id SERIAL PRIMARY KEY,
+		username TEXT UNIQUE NOT NULL,
+		token TEXT UNIQUE NOT NULL
+	);`
 	_, err := db.Exec(query)
+	if err != nil {
+		return err
+	}
+	query = `CREATE TABLE IF NOT EXISTS chats (
+		id SERIAL PRIMARY KEY,
+		client_id INT REFERENCES clients(id) ON DELETE CASCADE,
+		chat_id TEXT UNIQUE NOT NULL
+	);`
+	_, err = db.Exec(query)
+	if err != nil {
+		return err
+	}
+	query = `CREATE TABLE IF NOT EXISTS messages (
+		id SERIAL PRIMARY KEY,
+		chat_id TEXT REFERENCES chats(chat_id) ON DELETE CASCADE,
+		sender TEXT,
+		text TEXT,
+		timestamp_ms BIGINT,
+		hash TEXT,
+		delivered BOOLEAN DEFAULT FALSE
+	);`
+	_, err = db.Exec(query)
 	if err != nil {
 		return err
 	}
@@ -48,6 +70,19 @@ func StoreMessage(db *DB, message models.Message) error {
 		return err
 	}
 	return nil
+}
+
+func AddClient(db *DB, username, token string) (int, error) {
+	query := `
+	INSERT INTO clients (username, token)
+	VALUES ($1, $2)
+	RETURNING id;`
+	var clientID int
+	err := db.QueryRow(query, username, token).Scan(&clientID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to add client: %w", err)
+	}
+	return clientID, nil
 }
 
 func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
