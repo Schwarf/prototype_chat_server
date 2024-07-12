@@ -113,7 +113,7 @@ func GetClientIDAndSalt(db *DB, token string) (int, string, error) {
 }
 
 func RetrieveUndeliveredMessages(db *DB) ([]models.DBMessage, error) {
-	rows, err := db.Query("SELECT id, chat_id, client_id, text, timestamp_ms, hash FROM messages WHERE delivered_to_client = false")
+	rows, err := db.Query("SELECT id, chat_id, client_id, text, timestamp_ms, hash FROM messages WHERE delivered = false")
 	if err != nil {
 		return nil, err
 	}
