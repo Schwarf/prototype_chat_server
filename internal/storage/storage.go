@@ -85,6 +85,31 @@ func AddClient(db *DB, username, token string) (int, error) {
 	return clientID, nil
 }
 
+func AddChat(db *DB, clientID int, chatID string) error {
+	query := `
+	INSERT INTO chats (client_id, chat_id)
+	VALUES ($1, $2)
+	ON CONFLICT (chat_id) DO NOTHING;`
+	_, err := db.Exec(query, clientID, chatID)
+	if err != nil {
+		return fmt.Errorf("failed to store chat: %w", err)
+	}
+	return nil
+}
+
+func GetClientIDByToken(db *DB, token string) (int, error) {
+	var clientID int
+	query := `
+	SELECT id
+	FROM clients
+	WHERE token = $1;`
+	err := db.QueryRow(query, token).Scan(&clientID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get client by token: %w", err)
+	}
+	return clientID, nil
+}
+
 func RetrieveUndeliveredMessages(db *DB) ([]models.Message, error) {
 	rows, err := db.Query("SELECT id, chat_id, sender, text, timestamp_ms, hash FROM messages WHERE delivered_to_client = false")
 	if err != nil {
