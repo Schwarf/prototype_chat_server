@@ -5,12 +5,13 @@ import (
 )
 
 type ChatClient struct {
-	ID         string
+	ID         int
 	Connection *websocket.Conn
 	Online     bool
 }
 
 type Client struct {
+	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Token    string `json:"token"`
 }

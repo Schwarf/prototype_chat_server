@@ -122,7 +122,20 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 		return
 	}
 	defer connection.Close()
-	clientID := fmt.Sprintf("ChatClient-%d", time.Now().UnixNano())
+	token := request.Header.Get("Authorization")
+	if token == "" {
+		log.Println("Missing token")
+		http.Error(writer, "Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	clientID, err := storage.GetClientIDByToken(s.database, token)
+	if err != nil {
+		log.Printf("Failed to get client ID by token: %v", err)
+		http.Error(writer, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
 	client := &models.ChatClient{ID: clientID, Connection: connection}
 
 	s.mutex.Lock()

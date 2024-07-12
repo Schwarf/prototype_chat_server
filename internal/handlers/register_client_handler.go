@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"github.com/Schwarf/prototype_chat_server/internal/authentication"
 	"github.com/Schwarf/prototype_chat_server/internal/models"
+	"github.com/Schwarf/prototype_chat_server/internal/storage"
 	"github.com/google/uuid"
 	"log"
 	"net/http"
 )
 
-func RegisterClientHandler(writer http.ResponseWriter, request *http.Request) {
+func RegisterClientHandler(database *storage.DB, writer http.ResponseWriter, request *http.Request) {
 	// Expected request send to endpoint
 	var submittedRequest struct {
 		Secret   string `json:"secret"`
@@ -37,7 +38,13 @@ func RegisterClientHandler(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, "Error generating token", http.StatusInternalServerError)
 		return
 	}
-	clientID := uuid.New().String()
+	clientID, err := storage.AddClient(database, submittedRequest.Username, token)
+	salt := uuid.New().String()
+
+	if err != nil {
+		http.Error(writer, "Error adding client to database", http.StatusInternalServerError)
+		return
+	}
 	client := models.Client{
 		Username: submittedRequest.Username,
 		Token:    token,
@@ -47,5 +54,5 @@ func RegisterClientHandler(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(writer).Encode(client)
-	log.Println("Client is registered")
+	log.Println("Client has been registered successfully")
 }

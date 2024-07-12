@@ -31,7 +31,8 @@ func createTables(db *sql.DB) error {
 	query := `CREATE TABLE IF NOT EXISTS clients (
 		id SERIAL PRIMARY KEY,
 		username TEXT UNIQUE NOT NULL,
-		token TEXT UNIQUE NOT NULL
+		token TEXT UNIQUE NOT NULL,
+	    salt TEXT UNIQUE NOT NULL
 	);`
 	_, err := db.Exec(query)
 	if err != nil {
@@ -49,7 +50,7 @@ func createTables(db *sql.DB) error {
 	query = `CREATE TABLE IF NOT EXISTS messages (
 		id SERIAL PRIMARY KEY,
 		chat_id TEXT REFERENCES chats(chat_id) ON DELETE CASCADE,
-		sender TEXT,
+		client_id INT REFERENCES clients(id) ON DELETE CASCADE,
 		text TEXT,
 		timestamp_ms BIGINT,
 		hash TEXT,
@@ -63,9 +64,9 @@ func createTables(db *sql.DB) error {
 }
 
 func StoreMessage(db *DB, message models.Message) error {
-	log.Println("Message: ", message.ChatID, message.Sender, message.Text)
-	_, err := db.Exec("INSERT INTO messages (chat_id, sender, text, timestamp_ms, hash) VALUES ($1, $2, $3, $4, $5)",
-		message.ChatID, message.Sender, message.Text, message.Timestamp_ms, message.Hash)
+	log.Println("Message: ", message.ChatID, message.Text)
+	_, err := db.Exec("INSERT INTO messages (client_id, chat_id, text, timestamp_ms, hash) VALUES ($1, $2, $3, $4, $5)",
+		message.ClientID, message.ChatID, message.Text, message.Timestamp_ms, message.Hash)
 	if err != nil {
 		return err
 	}
