@@ -169,9 +169,9 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 	s.clients[client] = true
 	s.mutex.Unlock()
 
-	log.Printf("ChatClient %s connected", client.ID)
+	log.Printf("ChatClient %d connected", client.ID)
 	defer func() {
-		log.Printf("ChatClient %s disconnected", client.ID)
+		log.Printf("ChatClient %d disconnected", client.ID)
 		s.mutex.Lock()
 		delete(s.clients, client)
 		s.mutex.Unlock()
@@ -195,12 +195,12 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 			continue
 		}
 
-		log.Printf("Received message from client %s at %s: %s\n", clientID, time.Now().Format(time.RFC3339), message)
+		log.Printf("Received message from client %d at %s: %s\n", clientID, time.Now().Format(time.RFC3339), message)
 		s.broadcast <- msg
 		if err := s.storeMessage(msg); err != nil {
 			log.Printf("Failed to store message! Error: %v", err)
 		}
-		ack := fmt.Sprintf("Message from %s received at %s", client.ID, time.Now().Format(time.RFC3339))
+		ack := fmt.Sprintf("Message from client %d received at %s", client.ID, time.Now().Format(time.RFC3339))
 		if err := client.SendMessage(websocket.TextMessage, []byte(ack)); err != nil {
 			log.Printf("Error sending acknowledgment to WebSocket: %v", err)
 		}
