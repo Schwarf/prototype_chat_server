@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -125,7 +126,13 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 		return
 	}
 	defer connection.Close()
-	token := request.Header.Get("Authorization")
+	authenticationHeader := request.Header.Get("Authorization")
+	if authenticationHeader == "" {
+		http.Error(writer, "Authorization header is missing", http.StatusUnauthorized)
+		return
+	}
+	token := strings.TrimPrefix(authenticationHeader, "Bearer ")
+
 	if token == "" {
 		log.Println("Missing token")
 		http.Error(writer, "Missing token", http.StatusUnauthorized)
