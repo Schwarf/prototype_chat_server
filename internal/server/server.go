@@ -111,6 +111,23 @@ func (s *Server) Start() error {
 	return http.ListenAndServe(s.config.Port, nil)
 }
 
+func (s *Server) Stop() error {
+	fmt.Println("Stopping server...")
+
+	// Drop all tables in the database
+	if err := storage.DropAllTables(s.database.DB); err != nil {
+		log.Printf("Failed to drop tables: %v", err)
+		return err
+	}
+
+	// Close database connection
+	s.database.Close()
+
+	// Additional cleanup tasks if needed
+	fmt.Println("Server stopped.")
+	return nil
+}
+
 func (s *Server) storeMessage(message models.Message) error {
 	if err := storage.StoreMessage(s.database, message); err != nil {
 		log.Printf("Storing message failed! Error: %v", err)

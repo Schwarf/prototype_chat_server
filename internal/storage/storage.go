@@ -137,3 +137,33 @@ func UpdateMessageStatus(db *DB, messageID int, deliveredToClient bool) error {
 	}
 	return nil
 }
+
+func DropAllTables(db *sql.DB) error {
+	// Query to get all table names
+	query := `
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE';
+    `
+	rows, err := db.Query(query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// Loop through results and drop each table
+	for rows.Next() {
+		var tableName string
+		if err := rows.Scan(&tableName); err != nil {
+			return err
+		}
+		dropStmt := fmt.Sprintf("DROP TABLE IF EXISTS %s CASCADE;", tableName)
+		if _, err := db.Exec(dropStmt); err != nil {
+			return err
+		}
+		fmt.Printf("Dropped table %s\n", tableName)
+	}
+
+	return nil
+}
