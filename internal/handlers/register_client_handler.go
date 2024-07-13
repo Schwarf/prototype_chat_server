@@ -67,6 +67,7 @@ func RegisterClient(database *storage.DB, writer http.ResponseWriter, request *h
 
 	authentication.RegisterClient(clientID, client)
 	authentication.RemoveSecret(submittedRequest.Secret)
+
 	writer.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(writer).Encode(client)
 	log.Println("Client has been registered successfully")

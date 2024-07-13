@@ -65,6 +65,15 @@ func createTables(db *sql.DB) error {
 
 func StoreMessage(db *DB, message models.Message) error {
 	log.Println("Message: ", message.ChatID, message.Text)
+	if message.ChatID == "" {
+		chatID := "self"
+		log.Println("Chat ID is empty!")
+		err := AddChat(db, message.ClientID, chatID)
+		if err != nil {
+			log.Println("Error adding chat id to chat: ", err)
+			return err
+		}
+	}
 	_, err := db.Exec("INSERT INTO messages (client_id, chat_id, text, timestamp_ms, hash) VALUES ($1, $2, $3, $4, $5)",
 		message.ClientID, message.ChatID, message.Text, message.Timestamp_ms, message.Hash)
 	if err != nil {

@@ -24,7 +24,7 @@ type RegisterResponse struct {
 }
 
 type Message struct {
-	ClientID    int    `json:"client_id"`
+	ClientID    int    `json:"clientId"`
 	Text        string `json:"text"`
 	TimestampMs int64  `json:"timestamp_ms"`
 	Hash        string `json:"hash"`
@@ -94,6 +94,7 @@ func TestClient(t *testing.T) {
 
 	// Send a test message
 	message := "Hello, Server!"
+
 	hash := authentication.GenerateHash(message, registerResponse.Salt)
 	msg := Message{
 		ClientID:    registerResponse.ID,
@@ -101,7 +102,9 @@ func TestClient(t *testing.T) {
 		TimestampMs: 0,
 		Hash:        hash,
 	}
+	t.Log("Client ID", msg.ClientID)
 	msgBytes, err := json.Marshal(msg)
+
 	if err != nil {
 		t.Fatalf("failed to marshal message: %v", err)
 	}
