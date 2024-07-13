@@ -66,9 +66,9 @@ func createTables(db *sql.DB) error {
 func StoreMessage(db *DB, message models.Message) error {
 	log.Println("Message: ", message.ChatID, message.Text)
 	if message.ChatID == "" {
-		chatID := "self"
+		message.ChatID = "self"
 		log.Println("Chat ID is empty!")
-		err := AddChat(db, message.ClientID, chatID)
+		err := AddChat(db, message.ClientID, message.ChatID)
 		if err != nil {
 			log.Println("Error adding chat id to chat: ", err)
 			return err
