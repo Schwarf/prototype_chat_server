@@ -163,9 +163,17 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	client := &models.ChatClient{ID: clientID, Connection: connection}
-
+	// Check if client with this ID is already connected.
 	s.mutex.Lock()
+	for client := range s.clients {
+		if client.ID == clientID {
+			s.mutex.Unlock()
+			log.Printf("Client %d is already connected. Declining new connection attempt.", clientID)
+			connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client already connected"))
+			return
+		}
+	}
+	client := &models.ChatClient{ID: clientID, Connection: connection}
 	s.clients[client] = true
 	s.mutex.Unlock()
 
