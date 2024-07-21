@@ -115,10 +115,10 @@ func (s *Server) Stop() error {
 	fmt.Println("Stopping server...")
 
 	// Drop all tables in the database
-	if err := storage.DropAllTables(s.database.DB); err != nil {
-		log.Printf("Failed to drop tables: %v", err)
-		return err
-	}
+	//if err := storage.DropAllTables(s.database.DB); err != nil {
+	//	log.Printf("Failed to drop tables: %v", err)
+	//	return err
+	//}
 
 	// Close database connection
 	s.database.Close()
@@ -158,7 +158,7 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 
 	clientID, salt, err := storage.GetClientIDAndSalt(s.database, token)
 	if err != nil {
-		log.Printf("Failed to get client ID by token: %v", err)
+		log.Printf("Failed to get client ID by token: %v, %s", err, token)
 		http.Error(writer, "Invalid token", http.StatusUnauthorized)
 		return
 	}

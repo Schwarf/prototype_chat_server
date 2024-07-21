@@ -60,6 +60,26 @@ func createTables(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+
+	query = `CREATE TABLE IF NOT EXISTS secrets (
+		id SERIAL PRIMARY KEY,
+		secret TEXT UNIQUE NOT NULL,
+		used BOOLEAN DEFAULT FALSE
+	);`
+	_, err = db.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func MarkSecretAsUsed(db *DB, secret string) error {
+	_, err := db.Exec("INSERT INTO secrets (secret, used) VALUES ($1, $2)", secret, true)
+	if err != nil {
+		log.Printf("Marking secret as used: %v\n", err)
+		return err
+	}
 	return nil
 }
 

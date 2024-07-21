@@ -35,7 +35,14 @@ func RegisterClient(database *storage.DB, writer http.ResponseWriter, request *h
 
 	// Validate the submitted secret
 	if !authentication.IsSecretValid(submittedRequest.Secret) {
+		log.Println("Invalid secret. Registration declined!")
 		http.Error(writer, "Invalid secret", http.StatusUnauthorized)
+		return
+	}
+
+	err = storage.MarkSecretAsUsed(database, submittedRequest.Secret)
+	if err != nil {
+		log.Println("Invalid secret. Already known in persistence.")
 		return
 	}
 
@@ -65,8 +72,8 @@ func RegisterClient(database *storage.DB, writer http.ResponseWriter, request *h
 		Salt:     salt,
 	}
 
-	authentication.RegisterClient(clientID, client)
 	authentication.RemoveSecret(submittedRequest.Secret)
+	authentication.RegisterClient(clientID, client)
 
 	writer.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(writer).Encode(client)
