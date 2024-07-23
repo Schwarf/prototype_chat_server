@@ -102,6 +102,9 @@ func (s *Server) handleMessages() {
 
 func (s *Server) Start() error {
 	http.HandleFunc("/", s.homepage)
+	http.HandleFunc("/check_presence", func(writer http.ResponseWriter, request *http.Request) {
+		handlers.CheckPresence(s.clients, &s.mutex, writer, request)
+	})
 	http.HandleFunc("/register", func(writer http.ResponseWriter, request *http.Request) {
 		handlers.RegisterClient(s.database, writer, request)
 	})
