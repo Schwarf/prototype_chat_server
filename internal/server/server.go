@@ -18,12 +18,13 @@ import (
 )
 
 type Server struct {
-	config    *config.ServerConfig
-	clients   map[*models.ChatClient]bool
-	broadcast chan models.Message
-	mutex     sync.Mutex
-	database  *storage.DB
-	upgrader  websocket.Upgrader
+	config        *config.ServerConfig
+	clients       map[*models.ChatClient]bool
+	broadcast     chan models.Message
+	mutex         sync.Mutex
+	database      *storage.DB
+	upgrader      websocket.Upgrader
+	clientSignals map[int]chan struct{} // Map of clientID to channel
 }
 
 func NewServer(serverConfig *config.ServerConfig, dataBase *storage.DB) *Server {
@@ -37,6 +38,7 @@ func NewServer(serverConfig *config.ServerConfig, dataBase *storage.DB) *Server 
 			WriteBufferSize: 1024,
 			CheckOrigin:     func(r *http.Request) bool { return true },
 		},
+		clientSignals: make(map[int]chan struct{}),
 	}
 }
 
