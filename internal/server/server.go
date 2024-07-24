@@ -39,6 +39,7 @@ func NewServer(serverConfig *config.ServerConfig, dataBase *storage.DB) *Server 
 		},
 	}
 }
+
 func (s *Server) homepage(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(writer, "Welcome to Schwarf's WebSocket chat server!")
 }
@@ -180,7 +181,7 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 			return
 		}
 	}
-	client := &models.ChatClient{ID: clientID, Connection: connection}
+	client := &models.ChatClient{ID: clientID, Connection: connection, Online: true}
 	s.clients[client] = true
 	s.mutex.Unlock()
 

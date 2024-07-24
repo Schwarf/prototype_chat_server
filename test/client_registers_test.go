@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 )
 
 type RegisterRequest struct {
@@ -66,6 +67,31 @@ func connectWebSocket(token string, t *testing.T) *websocket.Conn {
 	if err != nil {
 		t.Fatalf("failed to connect to WebSocket: %v", err)
 	}
+	return conn
+}
+
+func connectWebSocketWait(clientID int, token string, t *testing.T) *websocket.Conn {
+	headers := http.Header{}
+	headers.Add("Authorization", "Bearer "+token)
+	url := "ws://localhost:8080/ws"
+
+	conn, _, err := websocket.DefaultDialer.Dial(url, headers)
+	if err != nil {
+		t.Fatalf("failed to connect to WebSocket: %v", err)
+	}
+
+	// Poll for the connection to be recognized
+	timeout := time.Now().Add(time.Second) // Set a 5-second timeout
+	for time.Now().Before(timeout) {
+		presenceResponse, err := checkPresence(clientID, t)
+		if err == nil && presenceResponse.Status == "present" {
+			t.Log("WebSocket connection established and recognized by server.")
+			return conn
+		}
+		time.Sleep(100 * time.Millisecond) // Poll every 100ms
+	}
+
+	t.Fatalf("WebSocket connection established but not recognized by server within timeout.")
 	return conn
 }
 

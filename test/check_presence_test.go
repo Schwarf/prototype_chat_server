@@ -1,8 +1,8 @@
 package test
 
 import (
-	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"testing"
@@ -24,14 +24,16 @@ func checkPresence(clientID int, t *testing.T) (*PresenceResponse, error) {
 		return nil, fmt.Errorf("presence check failed with status code: %d", resp.StatusCode)
 	}
 
-	var presenceResponse PresenceResponse
-	err = json.NewDecoder(resp.Body).Decode(&presenceResponse)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode presence response: %v", err)
+		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 
+	// Handle the plain text response ("present" or "not_present")
+	presenceResponse := &PresenceResponse{Status: string(body)}
+
 	t.Logf("Presence check for client %d: %s", clientID, presenceResponse.Status)
-	return &presenceResponse, nil
+	return presenceResponse, nil
 }
 
 func TestCheckPresence(t *testing.T) {
@@ -60,7 +62,7 @@ func TestCheckPresence(t *testing.T) {
 	}
 
 	// Connect to WebSocket
-	conn := connectWebSocket(registerResponse.Token, t)
+	conn := connectWebSocketWait(clientID, registerResponse.Token, t)
 	t.Log("Connected to WebSocket")
 
 	// Check presence (should be present after connection)
