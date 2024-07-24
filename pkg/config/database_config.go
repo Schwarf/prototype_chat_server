@@ -15,7 +15,16 @@ type DatabaseConfig struct {
 }
 
 func LoadDataBaseConfig() (*DatabaseConfig, error) {
-	filePath := "/home/andreas/Documents/database_access/postgres_config.json"
+
+	envVariable := os.Getenv("APP_ENV")
+	var filePath string
+	switch envVariable {
+	case "test":
+		filePath = "/home/andreas/Documents/database_access/postgres_test_config.json"
+	default:
+		filePath = "/home/andreas/Documents/database_access/postgres_config.json"
+	}
+
 	var config DatabaseConfig
 	configFile, err := os.Open(filePath)
 	if err != nil {

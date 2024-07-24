@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -117,11 +118,14 @@ func (s *Server) Start() error {
 func (s *Server) Stop() error {
 	fmt.Println("Stopping server...")
 
-	// Drop all tables in the database
-	//if err := storage.DropAllTables(s.database.DB); err != nil {
-	//	log.Printf("Failed to drop tables: %v", err)
-	//	return err
-	//}
+	envVariable := os.Getenv("APP_ENV")
+	if envVariable != "" {
+		//Drop all tables in the database
+		if err := storage.DropAllTables(s.database.DB); err != nil {
+			log.Printf("Failed to drop tables: %v", err)
+			return err
+		}
+	}
 
 	// Close database connection
 	s.database.Close()
