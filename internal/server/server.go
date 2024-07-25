@@ -40,14 +40,14 @@ func NewServer(serverConfig *config.ServerConfig, dataBase *storage.DB) *Server 
 	}
 }
 
-func (s *Server) homepage(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintf(writer, "Welcome to Schwarf's WebSocket chat server!")
+func (server *Server) homepage(writer http.ResponseWriter, request *http.Request) {
+	fmt.Fprintf(writer, "Welcome to Schwarf'server WebSocket chat server!")
 }
 
-func (s *Server) broadcastMessage(message models.Message) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	for client := range s.clients {
+func (server *Server) broadcastMessage(message models.Message) {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
+	for client := range server.clients {
 		if client.Online {
 			msgJSON, err := json.Marshal(message)
 			if err != nil {
@@ -62,18 +62,18 @@ func (s *Server) broadcastMessage(message models.Message) {
 	}
 }
 
-func (s *Server) retryUndeliveredMessages() {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (server *Server) retryUndeliveredMessages() {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
 
-	undeliveredMessages, err := storage.RetrieveUndeliveredMessages(s.database)
+	undeliveredMessages, err := storage.RetrieveUndeliveredMessages(server.database)
 	if err != nil {
 		log.Printf("Failed to retrieve undelivered messages: %v", err)
 		return
 	}
 
 	for _, message := range undeliveredMessages {
-		for client := range s.clients {
+		for client := range server.clients {
 			if client.Online {
 				msgJSON, err := json.Marshal(message)
 				if err != nil {
@@ -84,113 +84,120 @@ func (s *Server) retryUndeliveredMessages() {
 					log.Printf("Error writing to WebSocket: %v", err)
 					client.Online = false
 				} else {
-					storage.UpdateMessageStatus(s.database, message.DBID, true)
+					storage.UpdateMessageStatus(server.database, message.DBID, true)
 				}
 			}
 		}
 	}
 }
 
-func (s *Server) handleMessages() {
+func (server *Server) handleMessages() {
 	for {
 		select {
-		case message := <-s.broadcast:
-			s.broadcastMessage(message)
+		case message := <-server.broadcast:
+			server.broadcastMessage(message)
 		case <-time.After(time.Second * 3):
-			s.retryUndeliveredMessages()
+			server.retryUndeliveredMessages()
 		}
 	}
 }
 
-func (s *Server) Start() error {
-	http.HandleFunc("/", s.homepage)
+func (server *Server) Start() error {
+	http.HandleFunc("/", server.homepage)
 	http.HandleFunc("/check_presence", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.CheckPresence(s.clients, &s.mutex, writer, request)
+		handlers.CheckPresence(server.clients, &server.mutex, writer, request)
 	})
 	http.HandleFunc("/register", func(writer http.ResponseWriter, request *http.Request) {
-		handlers.RegisterClient(s.database, writer, request)
+		handlers.RegisterClient(server.database, writer, request)
 	})
-	http.HandleFunc("/ws", s.websocketEndpoint)
-	log.Println("Starting server on port", s.config.Port)
-	go s.handleMessages()
-	return http.ListenAndServe(s.config.Port, nil)
+	http.HandleFunc("/ws", server.websocketEndpoint)
+	log.Println("Starting server on port", server.config.Port)
+	go server.handleMessages()
+	return http.ListenAndServe(server.config.Port, nil)
 }
 
-func (s *Server) Stop() error {
+func (server *Server) Stop() error {
 	fmt.Println("Stopping server...")
 
 	envVariable := os.Getenv("APP_ENV")
 	if envVariable != "" {
 		//Drop all tables in the database
-		if err := storage.DropAllTables(s.database.DB); err != nil {
+		if err := storage.DropAllTables(server.database.DB); err != nil {
 			log.Printf("Failed to drop tables: %v", err)
 			return err
 		}
 	}
 
 	// Close database connection
-	s.database.Close()
+	server.database.Close()
 
 	// Additional cleanup tasks if needed
 	fmt.Println("Server stopped.")
 	return nil
 }
 
-func (s *Server) storeMessage(message models.Message) error {
-	if err := storage.StoreMessage(s.database, message); err != nil {
+func (server *Server) storeMessage(message models.Message) error {
+	if err := storage.StoreMessage(server.database, message); err != nil {
 		log.Printf("Storing message failed! Error: %v", err)
 		return err
 	}
 	return nil
 }
 
-func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Request) {
-	connection, err := s.upgrader.Upgrade(writer, request, nil)
+func (server *Server) authenticateClient(request *http.Request, writer http.ResponseWriter) (int, string, error) {
+	authenticationHeader := request.Header.Get("Authorization")
+	if authenticationHeader == "" {
+		http.Error(writer, "Authorization header is missing", http.StatusUnauthorized)
+		return 0, "", fmt.Errorf("authorization header is missing")
+	}
+
+	token := strings.TrimPrefix(authenticationHeader, "Bearer ")
+	if token == "" {
+		log.Println("Missing token")
+		http.Error(writer, "Missing token", http.StatusUnauthorized)
+		return 0, "", fmt.Errorf("missing token")
+	}
+	clientID, salt, err := storage.GetClientIDAndSalt(server.database, token)
+	if err != nil {
+		log.Printf("Failed to get clientID by token: %v, %s", err, token)
+		http.Error(writer, "Invalid token", http.StatusUnauthorized)
+		return 0, "", fmt.Errorf("invalid token")
+	}
+	return clientID, salt, nil
+}
+
+func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Request) {
+	connection, err := server.upgrader.Upgrade(writer, request, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade to WebSocket: %v", err)
 		return
 	}
 	defer connection.Close()
-	authenticationHeader := request.Header.Get("Authorization")
-	if authenticationHeader == "" {
-		http.Error(writer, "Authorization header is missing", http.StatusUnauthorized)
-		return
-	}
-	token := strings.TrimPrefix(authenticationHeader, "Bearer ")
-
-	if token == "" {
-		log.Println("Missing token")
-		http.Error(writer, "Missing token", http.StatusUnauthorized)
-		return
-	}
-
-	clientID, salt, err := storage.GetClientIDAndSalt(s.database, token)
+	clientID, salt, err := server.authenticateClient(request, writer)
 	if err != nil {
-		log.Printf("Failed to get client ID by token: %v, %s", err, token)
-		http.Error(writer, "Invalid token", http.StatusUnauthorized)
-		return
+		log.Printf("Failed to authenticate client: %v", err)
 	}
 
 	// Check if client with this ID is already connected.
-	s.mutex.Lock()
-	for client := range s.clients {
+	server.mutex.Lock()
+	for client := range server.clients {
 		if client.ID == clientID {
-			s.mutex.Unlock()
+			server.mutex.Unlock()
 			log.Printf("Client %d is already connected. Declining new connection attempt.", clientID)
 			connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client already connected"))
 			return
 		}
 	}
 	client := &models.ChatClient{ID: clientID, Connection: connection, Online: true}
-	s.clients[client] = true
-	s.mutex.Unlock()
+	server.clients[client] = true
+	server.mutex.Unlock()
 
 	log.Printf("ChatClient %d connected", client.ID)
 	defer func() {
 		log.Printf("ChatClient %d disconnected", client.ID)
-		s.mutex.Lock()
-		delete(s.clients, client)
-		s.mutex.Unlock()
+		server.mutex.Lock()
+		delete(server.clients, client)
+		server.mutex.Unlock()
 	}()
 
 	for {
@@ -207,16 +214,16 @@ func (s *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Req
 
 		expectedHash := authentication.GenerateHash(msg.Text, salt)
 		if msg.Hash != expectedHash {
-			log.Printf("Invalid hash for message from client %s", clientID)
+			log.Printf("Invalid hash for message from client %server", clientID)
 			continue
 		}
 
-		log.Printf("Received message from client %d at %s: %s\n", clientID, time.Now().Format(time.RFC3339), message)
-		s.broadcast <- msg
-		if err := s.storeMessage(msg); err != nil {
+		log.Printf("Received message from client %d at %server: %server\n", clientID, time.Now().Format(time.RFC3339), message)
+		server.broadcast <- msg
+		if err := server.storeMessage(msg); err != nil {
 			log.Printf("Failed to store message! Error: %v", err)
 		}
-		ack := fmt.Sprintf("Message from client %d received at %s", client.ID, time.Now().Format(time.RFC3339))
+		ack := fmt.Sprintf("Message from client %d received at %server", client.ID, time.Now().Format(time.RFC3339))
 		if err := client.SendMessage(websocket.TextMessage, []byte(ack)); err != nil {
 			log.Printf("Error sending acknowledgment to WebSocket: %v", err)
 		}
