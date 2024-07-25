@@ -166,6 +166,20 @@ func (server *Server) authenticateClient(request *http.Request, writer http.Resp
 	return clientID, salt, nil
 }
 
+func (server *Server) isClientAlreadyConnected(clientID int, connection *websocket.Conn) bool {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
+	for client := range server.clients {
+		if client.ID == clientID {
+			log.Printf("Client %d is already connected. Declining new connection attempt.", clientID)
+			connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client already connected"))
+			return false
+
+		}
+	}
+	return true
+}
+
 func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Request) {
 	connection, err := server.upgrader.Upgrade(writer, request, nil)
 	if err != nil {
@@ -176,18 +190,13 @@ func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *htt
 	clientID, salt, err := server.authenticateClient(request, writer)
 	if err != nil {
 		log.Printf("Failed to authenticate client: %v", err)
+		return
 	}
 
-	// Check if client with this ID is already connected.
-	server.mutex.Lock()
-	for client := range server.clients {
-		if client.ID == clientID {
-			server.mutex.Unlock()
-			log.Printf("Client %d is already connected. Declining new connection attempt.", clientID)
-			connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client already connected"))
-			return
-		}
+	if server.isClientAlreadyConnected(clientID, connection) {
+		return
 	}
+
 	client := &models.ChatClient{ID: clientID, Connection: connection, Online: true}
 	server.clients[client] = true
 	server.mutex.Unlock()
