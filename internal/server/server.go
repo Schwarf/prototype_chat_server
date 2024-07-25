@@ -172,12 +172,30 @@ func (server *Server) isClientAlreadyConnected(clientID int, connection *websock
 	for client := range server.clients {
 		if client.ID == clientID {
 			log.Printf("Client %d is already connected. Declining new connection attempt.", clientID)
-			connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client already connected"))
+			err := connection.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Client already connected"))
+			if err != nil {
+				log.Printf("Failed to notify client %d about existing connection: %v", clientID, err)
+			}
 			return false
-
 		}
 	}
 	return true
+}
+
+func (server *Server) addChatClient(connection *websocket.Conn, clientID int) *models.ChatClient {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
+	chatClient := &models.ChatClient{ID: clientID, Connection: connection, Online: true}
+	server.clients[chatClient] = true
+	log.Printf("Added connection for new ChatClient %d", clientID)
+	return chatClient
+}
+
+func (server *Server) removeChatClient(chatClient *models.ChatClient) {
+	server.mutex.Lock()
+	defer server.mutex.Unlock()
+	delete(server.clients, chatClient)
+	log.Printf("ChatClient %d disconnected", chatClient.ID)
 }
 
 func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Request) {
@@ -189,7 +207,7 @@ func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *htt
 	defer connection.Close()
 	clientID, salt, err := server.authenticateClient(request, writer)
 	if err != nil {
-		log.Printf("Failed to authenticate client: %v", err)
+		log.Printf("Failed to authenticate chatClient: %v", err)
 		return
 	}
 
@@ -197,17 +215,8 @@ func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	client := &models.ChatClient{ID: clientID, Connection: connection, Online: true}
-	server.clients[client] = true
-	server.mutex.Unlock()
-
-	log.Printf("ChatClient %d connected", client.ID)
-	defer func() {
-		log.Printf("ChatClient %d disconnected", client.ID)
-		server.mutex.Lock()
-		delete(server.clients, client)
-		server.mutex.Unlock()
-	}()
+	chatClient := server.addChatClient(connection, clientID)
+	defer server.removeChatClient(chatClient)
 
 	for {
 		_, message, err := connection.ReadMessage()
@@ -223,17 +232,17 @@ func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *htt
 
 		expectedHash := authentication.GenerateHash(msg.Text, salt)
 		if msg.Hash != expectedHash {
-			log.Printf("Invalid hash for message from client %server", clientID)
+			log.Printf("Invalid hash for message from chatClient %server", clientID)
 			continue
 		}
 
-		log.Printf("Received message from client %d at %server: %server\n", clientID, time.Now().Format(time.RFC3339), message)
+		log.Printf("Received message from chatClient %d at %server: %server\n", clientID, time.Now().Format(time.RFC3339), message)
 		server.broadcast <- msg
 		if err := server.storeMessage(msg); err != nil {
 			log.Printf("Failed to store message! Error: %v", err)
 		}
-		ack := fmt.Sprintf("Message from client %d received at %server", client.ID, time.Now().Format(time.RFC3339))
-		if err := client.SendMessage(websocket.TextMessage, []byte(ack)); err != nil {
+		ack := fmt.Sprintf("Message from chatClient %d received at %server", chatClient.ID, time.Now().Format(time.RFC3339))
+		if err := chatClient.SendMessage(websocket.TextMessage, []byte(ack)); err != nil {
 			log.Printf("Error sending acknowledgment to WebSocket: %v", err)
 		}
 	}
