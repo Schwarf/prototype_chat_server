@@ -42,8 +42,12 @@ func readMessage(conn *websocket.Conn, t *testing.T) Message {
 func TestTwoClientsMessageExchange(t *testing.T) {
 	// Set up environment
 	secret := os.Getenv("CHAT_SERVER_SECRET")
+	secret2 := os.Getenv("CHAT_SERVER_SECRET2")
 	if secret == "" {
 		t.Fatalf("environment variable CHAT_SERVER_SECRET must be set")
+	}
+	if secret2 == "" {
+		t.Fatalf("environment variable CHAT_SERVER_SECRET2 must be set")
 	}
 
 	// Register Client A
@@ -58,7 +62,7 @@ func TestTwoClientsMessageExchange(t *testing.T) {
 
 	// Register Client B
 	usernameB := "ClientB"
-	registerResponseB, err := registerClient(secret, usernameB, t)
+	registerResponseB, err := registerClient(secret2, usernameB, t)
 	if err != nil {
 		t.Fatalf("failed to register Client B: %v", err)
 	}
