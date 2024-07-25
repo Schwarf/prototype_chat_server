@@ -81,7 +81,7 @@ func connectWebSocketWait(clientID int, token string, t *testing.T) *websocket.C
 	}
 
 	// Poll for the connection to be recognized
-	timeout := time.Now().Add(500 * time.Millisecond) // Set a 100 milli-second timeout
+	timeout := time.Now().Add(500 * time.Millisecond) // Set a 100 milliseconds timeout
 	for time.Now().Before(timeout) {
 		presenceResponse, err := checkPresence(clientID, t)
 		if err == nil && presenceResponse.Status == "present" {
