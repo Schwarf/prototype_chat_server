@@ -41,8 +41,8 @@ func setup() {
 			}
 		}()
 		log.Println("Started server in test!!!")
-		// Wait for the server to start
-		time.Sleep(2 * time.Second)
+		log.Println("Sleep for 0.5 seconds to get server up!!!")
+		time.Sleep(500 * time.Millisecond)
 	})
 }
 

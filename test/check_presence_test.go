@@ -62,7 +62,7 @@ func TestCheckPresence(t *testing.T) {
 	}
 
 	// Connect to WebSocket
-	conn := connectWebSocketWait(clientID, registerResponse.Token, t)
+	connection := connectWebSocketWait(clientID, registerResponse.Token, t)
 	t.Log("Connected to WebSocket")
 
 	// Check presence (should be present after connection)
@@ -75,7 +75,7 @@ func TestCheckPresence(t *testing.T) {
 	}
 
 	// Disconnect the WebSocket
-	disconnectWebSocket(conn, t)
+	disconnectWebSocket(connection, t)
 	t.Log("Disconnected from WebSocket")
 
 	// Check presence again (should be not present after disconnection)
