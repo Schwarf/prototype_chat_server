@@ -176,10 +176,10 @@ func (server *Server) isClientAlreadyConnected(clientID int, connection *websock
 			if err != nil {
 				log.Printf("Failed to notify client %d about existing connection: %v", clientID, err)
 			}
-			return false
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func (server *Server) addChatClient(connection *websocket.Conn, clientID int) *models.ChatClient {
@@ -196,6 +196,38 @@ func (server *Server) removeChatClient(chatClient *models.ChatClient) {
 	defer server.mutex.Unlock()
 	delete(server.clients, chatClient)
 	log.Printf("ChatClient %d disconnected", chatClient.ID)
+}
+
+func (server *Server) readMessages(chatClient *models.ChatClient, salt string) {
+	for {
+		_, message, err := chatClient.Connection.ReadMessage()
+		if err != nil {
+			log.Println(err)
+			break
+		}
+		var msg models.Message
+		if err := json.Unmarshal(message, &msg); err != nil {
+			log.Printf("Error unmarshaling message: %v", err)
+			continue
+		}
+
+		expectedHash := authentication.GenerateHash(msg.Text, salt)
+		if msg.Hash != expectedHash {
+			log.Printf("Invalid hash for message from chatClient %server", chatClient.ID)
+			continue
+		}
+
+		log.Printf("Received message from chatClient %d at %server: %server\n", chatClient.ID, time.Now().Format(time.RFC3339), message)
+		server.broadcast <- msg
+		if err := server.storeMessage(msg); err != nil {
+			log.Printf("Failed to store message! Error: %v", err)
+		}
+		ack := fmt.Sprintf("Message from chatClient %d received at %server", chatClient.ID, time.Now().Format(time.RFC3339))
+		if err := chatClient.SendMessage(websocket.TextMessage, []byte(ack)); err != nil {
+			log.Printf("Error sending acknowledgment to WebSocket: %v", err)
+		}
+	}
+
 }
 
 func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *http.Request) {
@@ -218,32 +250,5 @@ func (server *Server) websocketEndpoint(writer http.ResponseWriter, request *htt
 	chatClient := server.addChatClient(connection, clientID)
 	defer server.removeChatClient(chatClient)
 
-	for {
-		_, message, err := connection.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			break
-		}
-		var msg models.Message
-		if err := json.Unmarshal(message, &msg); err != nil {
-			log.Printf("Error unmarshaling message: %v", err)
-			continue
-		}
-
-		expectedHash := authentication.GenerateHash(msg.Text, salt)
-		if msg.Hash != expectedHash {
-			log.Printf("Invalid hash for message from chatClient %server", clientID)
-			continue
-		}
-
-		log.Printf("Received message from chatClient %d at %server: %server\n", clientID, time.Now().Format(time.RFC3339), message)
-		server.broadcast <- msg
-		if err := server.storeMessage(msg); err != nil {
-			log.Printf("Failed to store message! Error: %v", err)
-		}
-		ack := fmt.Sprintf("Message from chatClient %d received at %server", chatClient.ID, time.Now().Format(time.RFC3339))
-		if err := chatClient.SendMessage(websocket.TextMessage, []byte(ack)); err != nil {
-			log.Printf("Error sending acknowledgment to WebSocket: %v", err)
-		}
-	}
+	server.readMessages(chatClient, salt)
 }
